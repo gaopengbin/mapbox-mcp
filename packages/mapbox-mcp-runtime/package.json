@@ -1,0 +1,48 @@
+{
+  "name": "mapbox-mcp-runtime",
+  "version": "0.1.0",
+  "description": "Mapbox MCP Runtime Server — AI Agent 通过 MCP 协议操控浏览器 Mapbox GL JS",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "mapbox-mcp-runtime": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsup"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "ws": "^8.16.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/ws": "^8.5.10",
+    "tsup": "^8.5.1",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "mapbox",
+    "mcp",
+    "model-context-protocol",
+    "gis",
+    "ai-agent",
+    "map",
+    "mapbox-gl-js"
+  ],
+  "license": "MIT"
+}

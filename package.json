@@ -1,0 +1,19 @@
+{
+  "name": "mapbox-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP (Model Context Protocol) integration for Mapbox GL JS",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "clean": "rimraf packages/*/dist",
+    "dev": "npm run dev --workspace=packages/mapbox-mcp-runtime"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  },
+  "license": "MIT"
+}

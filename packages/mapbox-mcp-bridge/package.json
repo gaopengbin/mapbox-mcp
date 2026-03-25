@@ -1,0 +1,43 @@
+{
+  "name": "mapbox-mcp-bridge",
+  "version": "0.1.0",
+  "description": "Mapbox MCP Bridge SDK — AI Agent 操控 Mapbox GL JS 的统一执行层",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "mapbox-gl": "^3.0.0 || ^2.0.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0",
+    "mapbox-gl": "^3.0.0"
+  },
+  "keywords": [
+    "mapbox",
+    "mcp",
+    "bridge",
+    "websocket",
+    "ai-agent",
+    "mapbox-gl-js"
+  ],
+  "license": "MIT"
+}

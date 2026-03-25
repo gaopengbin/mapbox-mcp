@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Mapbox MCP Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css" rel="stylesheet">
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js"></script>
+  <style>
+    :root {
+      --bg: #09090b; --bg-card: #18181b; --bg-popover: #27272a;
+      --border: #27272a; --border-hover: #3f3f46;
+      --fg: #fafafa; --fg-muted: #a1a1aa; --fg-dim: #71717a;
+      --accent: #3b82f6; --accent-hover: #2563eb;
+      --success: #22c55e; --danger: #ef4444; --warning: #eab308;
+      --radius: 8px; --radius-sm: 6px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { display: flex; height: 100vh; font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--fg); overflow: hidden; }
+
+    #map { width: 100%; height: 100%; }
+
+    .panel { width: 420px; display: flex; flex-direction: column; background: var(--bg); border-left: 1px solid var(--border); }
+    .panel-header {
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .panel-header h1 { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+    .panel-header h1 span { color: var(--fg-dim); font-weight: 400; margin-left: 6px; font-size: 12px; }
+    .panel-scroll { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+    .panel-scroll::-webkit-scrollbar { width: 4px; }
+    .panel-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 100px;
+      border: 1px solid transparent;
+    }
+    .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+    .badge.ok { background: #052e16; color: #4ade80; border-color: #14532d; }
+    .badge.ok::before { background: #4ade80; }
+    .badge.err { background: #450a0a; color: #fca5a5; border-color: #7f1d1d; }
+    .badge.err::before { background: #fca5a5; }
+
+    .section { border-bottom: 1px solid var(--border); }
+    .section-title {
+      padding: 12px 20px; font-size: 12px; font-weight: 500; color: var(--fg-muted);
+      cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+      user-select: none; transition: color 0.15s; letter-spacing: 0.02em;
+    }
+    .section-title:hover { color: var(--fg); }
+    .section-title .arrow { font-size: 10px; transition: transform 0.2s ease; color: var(--fg-dim); }
+    .section.collapsed .section-body { display: none; }
+    .section.collapsed .arrow { transform: rotate(-90deg); }
+    .section-body { padding: 4px 20px 16px; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 6px 14px; font-size: 12px; font-weight: 500; font-family: inherit;
+      background: var(--bg-card); color: var(--fg-muted); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .btn:hover { background: var(--bg-popover); color: var(--fg); border-color: var(--border-hover); }
+    .btn:active { transform: scale(0.97); }
+    .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn.primary:hover { background: var(--accent-hover); }
+    .btn.destructive { color: var(--danger); border-color: #7f1d1d40; }
+    .btn.destructive:hover { background: #450a0a; border-color: #7f1d1d; }
+    .btn-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    #log {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace;
+      max-height: 220px; overflow-y: auto; line-height: 1.7;
+    }
+    .log-time { color: var(--fg-dim); }
+    .log-cmd { color: var(--accent); }
+    .log-ok { color: var(--success); }
+    .log-err { color: var(--danger); }
+    .log-info { color: var(--fg-muted); }
+
+    #screenshotPreview {
+      display: none; position: absolute; top: 16px; right: 436px;
+      width: 280px; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; z-index: 100;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+    }
+    #screenshotPreview img { width: 100%; display: block; }
+    #screenshotPreview .bar {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 12px; font-size: 11px; color: var(--fg-dim); border-top: 1px solid var(--border);
+    }
+    #screenshotPreview .bar button {
+      background: none; border: none; color: var(--fg-dim); cursor: pointer;
+      font-size: 11px; font-family: inherit; padding: 2px 6px; border-radius: 4px;
+    }
+    #screenshotPreview .bar button:hover { color: var(--fg); background: var(--bg-popover); }
+
+    .coord-bar {
+      position: absolute; bottom: 12px; left: 12px;
+      background: rgba(9,9,11,0.8); backdrop-filter: blur(8px);
+      padding: 5px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+      font-size: 11px; color: var(--fg-dim); font-family: 'JetBrains Mono', monospace;
+      z-index: 10;
+    }
+
+    .custom-textarea {
+      width: 100%; height: 72px; background: var(--bg-card); color: var(--fg);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 10px 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace;
+      resize: vertical; outline: none; transition: border-color 0.15s;
+    }
+    .custom-textarea:focus { border-color: var(--accent); }
+    .hint { font-size: 11px; color: var(--fg-dim); margin-top: 8px; }
+
+    .header-actions { display: flex; align-items: center; gap: 6px; }
+    .toggle-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border-radius: var(--radius-sm); cursor: pointer;
+      background: none; border: 1px solid var(--border); color: var(--fg-dim);
+      font-size: 14px; transition: all 0.15s;
+    }
+    .toggle-btn:hover { color: var(--fg); border-color: var(--border-hover); background: var(--bg-popover); }
+
+    .input-group { display: flex; gap: 6px; margin-top: 8px; }
+    .input-group input {
+      flex: 1; background: var(--bg-card); color: var(--fg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 6px 10px; font-size: 12px; font-family: inherit; outline: none;
+    }
+    .input-group input:focus { border-color: var(--accent); }
+
+    :root[data-theme="light"] {
+      --bg: #ffffff; --bg-card: #f4f4f5; --bg-popover: #e4e4e7;
+      --border: #e4e4e7; --border-hover: #d4d4d8;
+      --fg: #09090b; --fg-muted: #52525b; --fg-dim: #71717a;
+    }
+    [data-theme="light"] .badge.ok { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+    [data-theme="light"] .badge.ok::before { background: #22c55e; }
+    [data-theme="light"] .badge.err { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+    [data-theme="light"] .badge.err::before { background: #ef4444; }
+    [data-theme="light"] .coord-bar { background: rgba(255,255,255,0.85); }
+  </style>
+</head>
+<body>
+
+<div style="position:relative; flex:1; min-width:0;">
+  <div id="map"></div>
+  <div class="coord-bar" id="coordBar">--</div>
+  <div id="screenshotPreview">
+    <img id="ssImg">
+    <div class="bar">
+      <span id="ssTime"></span>
+      <div style="display:flex;gap:4px;">
+        <button onclick="downloadScreenshot()">Download</button>
+        <button onclick="closeScreenshot()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-header">
+    <h1>Mapbox MCP <span>Demo</span></h1>
+    <div class="header-actions">
+      <span id="wsStatus" class="badge err">Offline</span>
+      <button class="toggle-btn" onclick="toggleTheme()" id="themeBtn" title="Theme">&#9789;</button>
+    </div>
+  </div>
+
+  <div class="panel-scroll">
+
+    <!-- Token -->
+    <div class="section">
+      <div class="section-title" onclick="toggleSection(this)">
+        <span>Access Token</span> <span class="arrow">&#9660;</span>
+      </div>
+      <div class="section-body">
+        <div class="input-group" style="margin-top:0;">
+          <input id="tokenInput" type="text" placeholder="pk.eyJ...">
+          <button class="btn primary" onclick="applyToken()">Apply</button>
+        </div>
+        <div class="hint">Enter your Mapbox access token to enable the map</div>
+      </div>
+    </div>
+
+    <!-- View -->
+    <div class="section">
+      <div class="section-title" onclick="toggleSection(this)">
+        <span>View Control</span> <span class="arrow">&#9660;</span>
+      </div>
+      <div class="section-body">
+        <div class="btn-grid">
+          <button class="btn" onclick="fly(116.39,39.91,11)">Beijing</button>
+          <button class="btn" onclick="fly(121.47,31.23,11)">Shanghai</button>
+          <button class="btn" onclick="fly(113.26,23.13,11)">Guangzhou</button>
+          <button class="btn" onclick="fly(104.07,30.67,11)">Chengdu</button>
+          <button class="btn" onclick="fly(114.06,22.54,11)">Shenzhen</button>
+          <button class="btn" onclick="fly(-73.98,40.75,12)">New York</button>
+          <button class="btn" onclick="fly(-0.12,51.51,12)">London</button>
+          <button class="btn" onclick="fly(139.69,35.69,12)">Tokyo</button>
+        </div>
+        <div class="btn-grid" style="margin-top:8px;">
+          <button class="btn primary" onclick="getView()">Get View</button>
+          <button class="btn primary" onclick="screenshot()">Screenshot</button>
+          <button class="btn" onclick="map.resetNorth({duration:1000})">Reset North</button>
+          <button class="btn" onclick="map.zoomIn({duration:500})">Zoom In</button>
+          <button class="btn" onclick="map.zoomOut({duration:500})">Zoom Out</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GeoJSON Layers -->
+    <div class="section">
+      <div class="section-title" onclick="toggleSection(this)">
+        <span>GeoJSON Layers</span> <span class="arrow">&#9660;</span>
+      </div>
+      <div class="section-body">
+        <div class="btn-grid">
+          <button class="btn primary" onclick="addCitiesLayer()">China Cities</button>
+          <button class="btn primary" onclick="addRandomPolygon()">Random Polygon</button>
+          <button class="btn primary" onclick="addPolylineLayer()">Airline Route</button>
+        </div>
+        <div class="btn-grid" style="margin-top:6px;">
+          <button class="btn destructive" onclick="removeLayerSafe('cities','cities-source')">- cities</button>
+          <button class="btn destructive" onclick="removeLayerSafe('polygon1','polygon1-source')">- polygon</button>
+          <button class="btn destructive" onclick="removeLayerSafe('airline1','airline1-source')">- airline</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3D Buildings -->
+    <div class="section">
+      <div class="section-title" onclick="toggleSection(this)">
+        <span>3D Buildings & Terrain</span> <span class="arrow">&#9660;</span>
+      </div>
+      <div class="section-body">
+        <div class="btn-grid">
+          <button class="btn primary" onclick="add3DBuildings()">3D Buildings</button>
+          <button class="btn primary" onclick="toggleTerrain()">Toggle Terrain</button>
+          <button class="btn primary" onclick="addSky()">Sky Atmosphere</button>
+          <button class="btn primary" onclick="setFog()">Fog</button>
+        </div>
+        <div class="btn-grid" style="margin-top:6px;">
+          <button class="btn destructive" onclick="removeLayerSafe('3d-buildings')">- 3D buildings</button>
+        </div>
+        <div class="hint">3D buildings use Mapbox composite source</div>
+      </div>
+    </div>
+
+    <!-- Markers -->
+    <div class="section">
+      <div class="section-title" onclick="toggleSection(this)">
+        <span>Markers</span> <span class="arrow">&#9660;</span>
+      </div>
+      <div class="section-body">
+        <div class="btn-grid">
+          <button class="btn" onclick="addCityMarkers()">City Markers</button>
+          <button class="btn destructive" onclick="clearMarkers()">Clear All</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Style Switch -->
+    <div class="section">
+      <div class="section-title" onclick="toggleSection(this)">
+        <span>Map Style</span> <span class="arrow">&#9660;</span>
+      </div>
+      <div class="section-body">
+        <div class="btn-grid">
+          <button class="btn" onclick="setStyle('dark-v11')">Dark</button>
+          <button class="btn" onclick="setStyle('light-v11')">Light</button>
+          <button class="btn" onclick="setStyle('streets-v12')">Streets</button>
+          <button class="btn" onclick="setStyle('outdoors-v12')">Outdoors</button>
+          <button class="btn" onclick="setStyle('satellite-v9')">Satellite</button>
+          <button class="btn" onclick="setStyle('satellite-streets-v12')">Sat Streets</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom JSON Command -->
+    <div class="section">
+      <div class="section-title" onclick="toggleSection(this)">
+        <span>Custom JSON Command</span> <span class="arrow">&#9660;</span>
+      </div>
+      <div class="section-body">
+        <textarea id="customCmd" class="custom-textarea" spellcheck="false">{"action":"flyTo","params":{"center":[116.39,39.91],"zoom":14,"pitch":60,"duration":2000}}</textarea>
+        <button class="btn primary" style="margin-top:8px;" onclick="runCustomCmd()">Execute</button>
+      </div>
+    </div>
+
+    <!-- Log -->
+    <div class="section">
+      <div class="section-title" onclick="toggleSection(this)">
+        <span>Activity Log</span> <span class="arrow">&#9660;</span>
+      </div>
+      <div class="section-body">
+        <div id="log"><span class="log-info">Ready</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ========== Config ==========
+  const RUNTIME_WS_URL = 'ws://localhost:9200'
+  const SESSION_ID = 'demo'
+  let map = null
+  let markers = []
+  let terrainEnabled = false
+  let lastScreenshotUrl = null
+
+  // ========== Init Map ==========
+  function initMap(token) {
+    if (map) map.remove()
+    mapboxgl.accessToken = token
+    map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/dark-v11',
+      center: [116.39, 39.91],
+      zoom: 4,
+      pitch: 0,
+      bearing: 0,
+      preserveDrawingBuffer: true, // needed for screenshot
+    })
+    map.addControl(new mapboxgl.NavigationControl(), 'top-left')
+
+    map.on('mousemove', (e) => {
+      document.getElementById('coordBar').textContent =
+        `${e.lngLat.lng.toFixed(5)}, ${e.lngLat.lat.toFixed(5)}`
+    })
+
+    map.on('load', () => {
+      log('Map loaded', 'ok')
+    })
+
+    window.map = map
+  }
+
+  // User needs to provide their own Mapbox access token
+  try { initMap('') } catch(e) { /* will show auth error */ }
+
+  function applyToken() {
+    const token = document.getElementById('tokenInput').value.trim()
+    if (!token) return
+    initMap(token)
+    log('Token applied, map reinitializing...', 'info')
+  }
+
+  // ========== WebSocket Bridge ==========
+  let ws = null
+
+  function connectRuntime() {
+    const el = document.getElementById('wsStatus')
+    try {
+      ws = new WebSocket(`${RUNTIME_WS_URL}?session=${SESSION_ID}`)
+    } catch (e) {
+      el.textContent = 'Failed'; el.className = 'badge err'; return
+    }
+    ws.onopen = () => {
+      el.textContent = 'Connected'; el.className = 'badge ok'
+      log('Runtime WebSocket connected', 'ok')
+    }
+    ws.onmessage = async (event) => {
+      const msg = JSON.parse(event.data)
+      log(`remote: ${msg.method}`, 'cmd')
+      try {
+        const result = await executeCommand(msg.method, msg.params || {})
+        if (msg.id) ws.send(JSON.stringify({ id: msg.id, result: result || { success: true } }))
+      } catch(err) {
+        if (msg.id) ws.send(JSON.stringify({ id: msg.id, error: { message: err.message } }))
+        log(`error: ${err.message}`, 'err')
+      }
+    }
+    ws.onclose = () => {
+      el.textContent = 'Offline'; el.className = 'badge err'
+      log('Disconnected, retry in 5s...', 'err')
+      setTimeout(connectRuntime, 5000)
+    }
+    ws.onerror = () => {
+      el.textContent = 'Error'; el.className = 'badge err'
+    }
+  }
+  connectRuntime()
+
+  // ========== Command Dispatcher (mirrors MapboxBridge) ==========
+  function executeCommand(action, params) {
+    if (!map) throw new Error('Map not initialized')
+    switch (action) {
+      case 'flyTo': map.flyTo(params); return { success: true }
+      case 'easeTo': map.easeTo(params); return { success: true }
+      case 'jumpTo': map.jumpTo(params); return { success: true }
+      case 'getView': return getViewState()
+      case 'fitBounds': map.fitBounds(params.bounds, params); return { success: true }
+      case 'resetNorth': map.resetNorth(params); return { success: true }
+      case 'zoomIn': map.zoomIn(params); return { success: true }
+      case 'zoomOut': map.zoomOut(params); return { success: true }
+      case 'addSource': { const { id, ...spec } = params; map.addSource(id, spec); return { success: true } }
+      case 'removeSource': map.removeSource(params.id); return { success: true }
+      case 'addLayer': map.addLayer(params); return { success: true }
+      case 'removeLayer': map.removeLayer(params.id); return { success: true }
+      case 'setLayerVisibility':
+        map.setLayoutProperty(params.id, 'visibility', params.visible ? 'visible' : 'none')
+        return { success: true }
+      case 'setPaintProperty':
+        map.setPaintProperty(params.layerId, params.name, params.value)
+        return { success: true }
+      case 'setLayoutProperty':
+        map.setLayoutProperty(params.layerId, params.name, params.value)
+        return { success: true }
+      case 'setFilter':
+        map.setFilter(params.layerId, params.filter)
+        return { success: true }
+      case 'setStyle':
+        map.setStyle(`mapbox://styles/mapbox/${params.style}`)
+        return { success: true }
+      case 'setTerrain':
+        map.setTerrain(params.enabled ? { source: 'mapbox-dem', exaggeration: params.exaggeration || 1.5 } : null)
+        return { success: true }
+      case 'setFog':
+        map.setFog(params)
+        return { success: true }
+      case 'setSky':
+        // sky is set via style, use setLight with sky atmosphere
+        return { success: true }
+      case 'screenshot':
+        return { dataUrl: map.getCanvas().toDataURL('image/png') }
+      case 'queryRenderedFeatures': {
+        let features
+        if (params.point) features = map.queryRenderedFeatures(params.point, { layers: params.layers, filter: params.filter })
+        else features = map.queryRenderedFeatures({ layers: params.layers, filter: params.filter })
+        return { features: features.map(f => ({ id: f.id, layer: f.layer?.id, source: f.source, properties: f.properties })) }
+      }
+      case 'addMarker': {
+        const el = document.createElement('div')
+        el.style.cssText = `width:20px;height:20px;border-radius:50%;background:${params.color||'#3b82f6'};border:2px solid white;cursor:pointer;`
+        const m = new mapboxgl.Marker({ element: el })
+          .setLngLat([params.lng || params.longitude, params.lat || params.latitude])
+        if (params.label) m.setPopup(new mapboxgl.Popup().setText(params.label))
+        m.addTo(map)
+        m._id = params.id || `marker_${markers.length}`
+        markers.push(m)
+        return { success: true, id: m._id }
+      }
+      case 'addGeoJSON': return addGeoJSONLayer(params)
+      default: throw new Error(`Unknown command: ${action}`)
+    }
+  }
+
+  // ========== View helpers ==========
+  function fly(lng, lat, zoom) {
+    if (!map) return
+    log(`flyTo [${lng}, ${lat}] z${zoom}`, 'cmd')
+    map.flyTo({ center: [lng, lat], zoom, duration: 2000 })
+  }
+
+  function getView() {
+    if (!map) return
+    const state = getViewState()
+    log(`view: center=[${state.center.map(v=>v.toFixed(4))}] z=${state.zoom.toFixed(2)} pitch=${state.pitch.toFixed(1)} bearing=${state.bearing.toFixed(1)}`, 'ok')
+  }
+
+  function getViewState() {
+    const c = map.getCenter()
+    const b = map.getBounds()
+    return {
+      center: [c.lng, c.lat],
+      zoom: map.getZoom(),
+      bearing: map.getBearing(),
+      pitch: map.getPitch(),
+      bounds: b ? [[b.getWest(), b.getSouth()], [b.getEast(), b.getNorth()]] : null,
+    }
+  }
+
+  function screenshot() {
+    if (!map) return
+    const url = map.getCanvas().toDataURL('image/png')
+    showScreenshot(url)
+    log('Screenshot captured', 'ok')
+  }
+
+  // ========== GeoJSON ==========
+  const CITIES = [
+    { name: 'Beijing', lon: 116.39, lat: 39.91, pop: 2189 },
+    { name: 'Shanghai', lon: 121.47, lat: 31.23, pop: 2487 },
+    { name: 'Guangzhou', lon: 113.26, lat: 23.13, pop: 1868 },
+    { name: 'Shenzhen', lon: 114.06, lat: 22.54, pop: 1756 },
+    { name: 'Chengdu', lon: 104.07, lat: 30.67, pop: 2094 },
+    { name: 'Chongqing', lon: 106.55, lat: 29.56, pop: 3205 },
+    { name: 'Hangzhou', lon: 120.15, lat: 30.28, pop: 1194 },
+    { name: 'Wuhan', lon: 114.30, lat: 30.59, pop: 1121 },
+    { name: "Xi'an", lon: 108.94, lat: 34.26, pop: 1295 },
+    { name: 'Nanjing', lon: 118.80, lat: 32.06, pop: 942 },
+  ]
+
+  function cityGeoJson() {
+    return {
+      type: 'FeatureCollection',
+      features: CITIES.map(c => ({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [c.lon, c.lat] },
+        properties: { name: c.name, population: c.pop },
+      })),
+    }
+  }
+
+  function addGeoJSONLayer(params) {
+    const id = params.id || `geojson_${Date.now()}`
+    const srcId = `${id}-source`
+    if (map.getSource(srcId)) map.removeSource(srcId)
+
+    map.addSource(srcId, { type: 'geojson', data: params.data })
+
+    const data = params.data
+    const features = data?.features || []
+    const geomType = features[0]?.geometry?.type || 'Point'
+
+    if (geomType === 'Point' || geomType === 'MultiPoint') {
+      map.addLayer({
+        id, type: 'circle', source: srcId,
+        paint: {
+          'circle-radius': params.radius || 6,
+          'circle-color': params.color || '#f97316',
+          'circle-stroke-color': '#fff',
+          'circle-stroke-width': 2,
+        }
+      })
+    } else if (geomType === 'LineString' || geomType === 'MultiLineString') {
+      map.addLayer({
+        id, type: 'line', source: srcId,
+        paint: {
+          'line-color': params.color || '#a855f7',
+          'line-width': params.width || 3,
+        }
+      })
+    } else {
+      map.addLayer({
+        id, type: 'fill', source: srcId,
+        paint: {
+          'fill-color': params.fillColor || '#3b82f6',
+          'fill-opacity': params.fillOpacity ?? 0.25,
+          'fill-outline-color': params.strokeColor || '#3b82f6',
+        }
+      })
+    }
+    log(`addGeoJSON: ${id} (${geomType})`, 'ok')
+    return { success: true, layerId: id, sourceId: srcId }
+  }
+
+  function addCitiesLayer() {
+    if (!map || !map.loaded()) { log('Map not ready', 'err'); return }
+    addGeoJSONLayer({ id: 'cities', data: cityGeoJson(), color: '#f97316' })
+    map.fitBounds([[100, 18], [125, 42]], { padding: 40, duration: 2000 })
+  }
+
+  function addRandomPolygon() {
+    if (!map || !map.loaded()) return
+    const cx = 110 + Math.random() * 15
+    const cy = 25 + Math.random() * 15
+    const r = 1 + Math.random() * 2
+    const pts = []
+    for (let i = 0; i < 6; i++) {
+      const a = (Math.PI * 2 * i) / 6
+      pts.push([cx + r * Math.cos(a) * (0.8 + Math.random() * 0.4), cy + r * Math.sin(a) * (0.8 + Math.random() * 0.4)])
+    }
+    pts.push(pts[0])
+    const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6']
+    const c = colors[Math.floor(Math.random() * colors.length)]
+    addGeoJSONLayer({
+      id: 'polygon1',
+      data: { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Polygon', coordinates: [pts] }, properties: {} }] },
+      fillColor: c, fillOpacity: 0.25, strokeColor: c,
+    })
+  }
+
+  function addPolylineLayer() {
+    if (!map || !map.loaded()) return
+    const route = [[116.39, 39.91], [118.80, 32.06], [120.15, 30.28], [121.47, 31.23]]
+    addGeoJSONLayer({
+      id: 'airline1',
+      data: { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'LineString', coordinates: route }, properties: {} }] },
+      color: '#a855f7', width: 3,
+    })
+    map.fitBounds([[115, 29], [123, 41]], { padding: 40, duration: 2000 })
+  }
+
+  function removeLayerSafe(layerId, sourceId) {
+    if (!map) return
+    try { if (map.getLayer(layerId)) map.removeLayer(layerId) } catch(e) {}
+    try { if (sourceId && map.getSource(sourceId)) map.removeSource(sourceId) } catch(e) {}
+    log(`removed: ${layerId}`, 'info')
+  }
+
+  // ========== 3D Buildings ==========
+  function add3DBuildings() {
+    if (!map || !map.loaded()) return
+    if (map.getLayer('3d-buildings')) return
+
+    const layers = map.getStyle().layers || []
+    let labelLayerId
+    for (const layer of layers) {
+      if (layer.type === 'symbol' && layer.layout && layer.layout['text-field']) {
+        labelLayerId = layer.id
+        break
+      }
+    }
+
+    map.addLayer({
+      id: '3d-buildings', source: 'composite', 'source-layer': 'building',
+      filter: ['==', 'extrude', 'true'], type: 'fill-extrusion', minzoom: 15,
+      paint: {
+        'fill-extrusion-color': '#aaa',
+        'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'height']],
+        'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'min_height']],
+        'fill-extrusion-opacity': 0.6,
+      }
+    }, labelLayerId)
+
+    map.flyTo({ center: [121.49, 31.24], zoom: 16, pitch: 60, bearing: -17, duration: 3000 })
+    log('3D buildings added (zoom 15+)', 'ok')
+  }
+
+  function toggleTerrain() {
+    if (!map || !map.loaded()) return
+    terrainEnabled = !terrainEnabled
+    if (terrainEnabled) {
+      if (!map.getSource('mapbox-dem')) {
+        map.addSource('mapbox-dem', { type: 'raster-dem', url: 'mapbox://mapbox.mapbox-terrain-dem-v1', tileSize: 512, maxzoom: 14 })
+      }
+      map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 })
+      log('Terrain enabled', 'ok')
+    } else {
+      map.setTerrain(null)
+      log('Terrain disabled', 'info')
+    }
+  }
+
+  function addSky() {
+    if (!map || !map.loaded()) return
+    map.setSky({
+      'sky-type': 'atmosphere',
+      'sky-atmosphere-sun': [0.0, 0.0],
+      'sky-atmosphere-sun-intensity': 15,
+    })
+    log('Sky atmosphere added', 'ok')
+  }
+
+  function setFog() {
+    if (!map || !map.loaded()) return
+    map.setFog({
+      range: [0.5, 10],
+      color: '#dc9f9f',
+      'horizon-blend': 0.5,
+      'high-color': '#245bde',
+      'space-color': '#000000',
+      'star-intensity': 0.15,
+    })
+    log('Fog applied', 'ok')
+  }
+
+  // ========== Markers ==========
+  function addCityMarkers() {
+    if (!map) return
+    clearMarkers()
+    CITIES.forEach(c => {
+      const popup = new mapboxgl.Popup({ offset: 25 }).setText(`${c.name} (${c.pop}M)`)
+      const m = new mapboxgl.Marker({ color: '#f97316' })
+        .setLngLat([c.lon, c.lat])
+        .setPopup(popup)
+        .addTo(map)
+      markers.push(m)
+    })
+    map.fitBounds([[100, 18], [125, 42]], { padding: 40, duration: 2000 })
+    log(`Added ${CITIES.length} markers`, 'ok')
+  }
+
+  function clearMarkers() {
+    markers.forEach(m => m.remove())
+    markers = []
+    log('Markers cleared', 'info')
+  }
+
+  // ========== Style ==========
+  function setStyle(style) {
+    if (!map) return
+    map.setStyle(`mapbox://styles/mapbox/${style}`)
+    log(`Style: ${style}`, 'ok')
+  }
+
+  // ========== Custom Command ==========
+  function runCustomCmd() {
+    try {
+      const cmd = JSON.parse(document.getElementById('customCmd').value)
+      const result = executeCommand(cmd.action, cmd.params || {})
+      log(`custom: ${cmd.action} -> ${JSON.stringify(result).slice(0, 80)}`, 'ok')
+    } catch (e) {
+      log(`custom error: ${e.message}`, 'err')
+    }
+  }
+
+  // ========== Screenshot ==========
+  function showScreenshot(url) {
+    lastScreenshotUrl = url
+    document.getElementById('ssImg').src = url
+    document.getElementById('ssTime').textContent = new Date().toLocaleTimeString()
+    document.getElementById('screenshotPreview').style.display = 'block'
+  }
+  function closeScreenshot() { document.getElementById('screenshotPreview').style.display = 'none' }
+  function downloadScreenshot() {
+    if (!lastScreenshotUrl) return
+    const a = document.createElement('a')
+    a.href = lastScreenshotUrl
+    a.download = `mapbox-screenshot-${Date.now()}.png`
+    a.click()
+  }
+
+  // ========== UI ==========
+  function toggleSection(el) { el.parentElement.classList.toggle('collapsed') }
+  let currentTheme = 'dark'
+  function toggleTheme() {
+    currentTheme = currentTheme === 'dark' ? 'light' : 'dark'
+    document.documentElement.setAttribute('data-theme', currentTheme)
+    document.getElementById('themeBtn').innerHTML = currentTheme === 'dark' ? '&#9789;' : '&#9788;'
+    if (map) {
+      map.setStyle(`mapbox://styles/mapbox/${currentTheme === 'dark' ? 'dark-v11' : 'light-v11'}`)
+    }
+  }
+
+  // ========== Log ==========
+  function log(msg, cls) {
+    const el = document.getElementById('log')
+    const time = new Date().toLocaleTimeString()
+    el.innerHTML += `<div><span class="log-time">${time}</span> <span class="log-${cls || 'info'}">${msg}</span></div>`
+    el.scrollTop = el.scrollHeight
+  }
+</script>
+</body>
+</html>
