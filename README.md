@@ -7,7 +7,13 @@
   <p>Connect any MCP-compatible AI agent to <a href="https://www.mapbox.com/mapbox-gljs">Mapbox GL JS</a> — camera, layers, markers, sources, 3D terrain, all through natural language.</p>
 
   <p>
+    <a href="https://www.npmjs.com/package/mapbox-mcp-runtime"><img src="https://img.shields.io/npm/v/mapbox-mcp-runtime.svg" alt="npm version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+    <a href="https://github.com/gaopengbin/mapbox-mcp"><img src="https://img.shields.io/github/stars/gaopengbin/mapbox-mcp?style=flat" alt="GitHub stars"></a>
+  </p>
+
+  <p>
+    <a href="README.zh-CN.md">中文文档</a>
   </p>
 </div>
 
@@ -133,6 +139,11 @@ npm run build
 ## Inspired By
 
 This project follows the architecture of [cesium-mcp](https://github.com/gaopengbin/cesium-mcp), adapted for the Mapbox GL JS ecosystem.
+
+## Related Projects
+
+- [cesium-mcp](https://github.com/gaopengbin/cesium-mcp) — AI control for CesiumJS 3D globe
+- [openlayers-mcp](https://github.com/gaopengbin/openlayers-mcp) — AI control for OpenLayers
 
 ## License
 
