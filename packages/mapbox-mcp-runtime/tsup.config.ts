@@ -8,6 +8,9 @@ export default defineConfig({
   clean: true,
   target: 'node18',
   external: ['undici'],
+  banner: {
+    js: '#!/usr/bin/env node',
+  },
   define: {
     __VERSION__: JSON.stringify(pkg.version),
   },

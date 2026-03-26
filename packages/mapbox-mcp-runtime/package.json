@@ -1,12 +1,12 @@
 {
   "name": "mapbox-mcp-runtime",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Mapbox MCP Runtime Server — AI Agent 通过 MCP 协议操控浏览器 Mapbox GL JS",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "mapbox-mcp-runtime": "./dist/cli.js"
+    "mapbox-mcp-runtime": "dist/cli.js"
   },
   "exports": {
     ".": {
