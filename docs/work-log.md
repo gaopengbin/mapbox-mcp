@@ -41,5 +41,25 @@ AI Agent <-> MCP Server (stdio) <-> WebSocket (port 9200) <-> Browser (MapboxBri
 
 ### 已知事项
 - demo 页面中 token 已清空，用户需自行输入
-- 未添加 LICENSE 文件
 - 未配置 CI/CD
+
+## 2026-03-26 项目加速
+
+### 完成内容
+
+1. **npm 发布**
+   - mapbox-mcp-bridge@0.1.0
+   - mapbox-mcp-runtime@0.1.2 (0.1.0/0.1.1 的 bin 路径被 npm 移除，0.1.2 修复)
+   - bin 修复：`./dist/cli.js` -> `dist/cli.js`（npm pkg fix），去掉 `./` 前缀
+   - shebang 修复：移除 cli.ts 源码 shebang，使用 tsup banner 注入
+
+2. **GitHub 完善**
+   - 添加 11 个 topics (mapbox, mcp, model-context-protocol, ai, gis, map, mapbox-gl-js, typescript, webgis, mcp-server, geospatial)
+   - LICENSE 文件 (MIT)
+   - Chinese README (README.zh-CN.md)
+   - Stars badge + npm version badge
+   - Related Projects 交叉链接 (cesium-mcp, openlayers-mcp)
+
+3. **生态矩阵**
+   - 与 cesium-mcp (22 stars) 和 openlayers-mcp (新建) 形成三角交叉引用闭环
+   - 统一架构模式, 统一端口分配 (9100/9200/9300)
